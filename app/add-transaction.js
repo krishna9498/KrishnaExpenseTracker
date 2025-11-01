@@ -1,20 +1,21 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 const AddTransactionScreen = () => {
   const [formData, setFormData] = useState({
-    date: '',
+    date: '', // Empty by default - user can enter any date
     amount: '',
     description: '',
     location: '',
@@ -50,18 +51,28 @@ const AddTransactionScreen = () => {
     return true;
   };
 
-  const handleAddTransaction = () => {
+  const handleAddTransaction = async () => {
     if (validateForm()) {
-      const newTransaction = {
-        ...formData,
-        id: Date.now().toString(),
-        amount: parseFloat(formData.amount).toFixed(2),
-      };
-      
-      router.push({
-        pathname: '/dashboard',
-        params: { newTransaction: JSON.stringify(newTransaction) }
-      });
+      try {
+        const newTransaction = {
+          ...formData,
+          id: Date.now().toString(),
+          amount: parseFloat(formData.amount).toFixed(2),
+        };
+
+        // Get existing transactions and add new one
+        const storedTransactions = await AsyncStorage.getItem('@transactions');
+        const existingTransactions = storedTransactions ? JSON.parse(storedTransactions) : [];
+        const updatedTransactions = [newTransaction, ...existingTransactions];
+        
+        // Save to storage
+        await AsyncStorage.setItem('@transactions', JSON.stringify(updatedTransactions));
+        
+        Alert.alert('Success', 'Transaction added successfully!');
+        router.back(); // Go back to dashboard
+      } catch (error) {
+        Alert.alert('Error', 'Failed to save transaction');
+      }
     }
   };
 
@@ -75,7 +86,7 @@ const AddTransactionScreen = () => {
           <Text style={styles.label}>Date (YYYY-MM-DD)</Text>
           <TextInput
             style={styles.input}
-            placeholder="Enter date (e.g., 2024-10-27)"
+            placeholder="Enter date (e.g., 2025-01-27)"
             value={formData.date}
             onChangeText={(value) => handleInputChange('date', value)}
           />
@@ -176,11 +187,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     padding: 20,
     borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
   },
   label: {
     fontSize: 16,

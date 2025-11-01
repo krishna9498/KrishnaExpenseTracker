@@ -1,14 +1,14 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function SignInScreen() {
@@ -20,7 +20,7 @@ export default function SignInScreen() {
     if (username === 'admin' && password === 'admin') {
       router.replace('/dashboard');
     } else {
-      Alert.alert('Error', 'Invalid credentials. Use admin/admin');
+      Alert.alert('Error', 'Invalid credentials. Please try again.');
     }
   };
 
@@ -30,7 +30,7 @@ export default function SignInScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.formContainer}>
-        <Text style={styles.title}>🪙 KrishnaExpenseTracker</Text>
+        <Text style={styles.title}> KrishnaExpenseTracker</Text>
         <Text style={styles.subtitle}>Sign In to Continue</Text>
         
         <TextInput
@@ -54,7 +54,7 @@ export default function SignInScreen() {
           <Text style={styles.buttonText}>Sign In</Text>
         </TouchableOpacity>
         
-        <Text style={styles.helperText}>Use: admin / admin</Text>
+        
       </View>
     </KeyboardAvoidingView>
   );

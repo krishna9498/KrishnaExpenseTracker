@@ -1,50 +1,68 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
+import React, { useState } from 'react';
 import {
-    Alert,
-    FlatList,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function DashboardScreen() {
   const [transactions, setTransactions] = useState([]);
   const router = useRouter();
-  const params = useLocalSearchParams();
 
-  // Sample initial data
-  useEffect(() => {
-    setTransactions([
-      {
-        id: '1',
-        date: '2024-10-27',
-        amount: '150.00',
-        description: 'Grocery Shopping',
-        location: 'Supermarket',
-        type: 'Debit',
-        category: 'Shopping',
-      },
-      {
-        id: '2',
-        date: '2024-10-26',
-        amount: '2000.00',
-        description: 'Salary',
-        location: 'Bank',
-        type: 'Credit',
-        category: 'Income',
-      },
-    ]);
-  }, []);
+  // Load transactions from storage on focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadTransactions();
+    }, [])
+  );
 
-  // Handle new transaction from Add Transaction screen
-  useEffect(() => {
-    if (params.newTransaction) {
-      const newTransaction = JSON.parse(params.newTransaction);
-      setTransactions(prev => [newTransaction, ...prev]);
+  const loadTransactions = async () => {
+    try {
+      const storedTransactions = await AsyncStorage.getItem('@transactions');
+      if (storedTransactions) {
+        setTransactions(JSON.parse(storedTransactions));
+      } else {
+        // ONLY 2 initial transactions
+        const initialTransactions = [
+          {
+            id: '1',
+            date: '2025-01-27',
+            amount: '150.00',
+            description: 'Grocery Shopping',
+            location: 'Supermarket',
+            type: 'Debit',
+            category: 'Shopping',
+          },
+          {
+            id: '2',
+            date: '2025-01-26', 
+            amount: '1000.00',
+            description: 'Salary',
+            location: 'Bank',
+            type: 'Credit',
+            category: 'Income',
+          },
+        ];
+        setTransactions(initialTransactions);
+        await AsyncStorage.setItem('@transactions', JSON.stringify(initialTransactions));
+      }
+    } catch (error) {
+      console.error('Error loading transactions:', error);
     }
-  }, [params.newTransaction]);
+  };
+
+  const saveTransactions = async (newTransactions) => {
+    try {
+      await AsyncStorage.setItem('@transactions', JSON.stringify(newTransactions));
+    } catch (error) {
+      console.error('Error saving transactions:', error);
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -70,6 +88,17 @@ export default function DashboardScreen() {
       pathname: '/transaction-detail',
       params: { transaction: JSON.stringify(transaction) }
     });
+  };
+
+  // Function to add new transaction
+  const addNewTransaction = (newTransaction) => {
+    const transactionWithId = {
+      ...newTransaction,
+      id: Date.now().toString(),
+    };
+    const updatedTransactions = [transactionWithId, ...transactions];
+    setTransactions(updatedTransactions);
+    saveTransactions(updatedTransactions);
   };
 
   const getAmountColor = (type) => {
@@ -120,6 +149,17 @@ export default function DashboardScreen() {
 
   return (
     <View style={styles.container}>
+      <Stack.Screen 
+        options={{
+          title: 'Krishna Expense Dashboard',
+          headerRight: () => (
+            <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+              <Text style={styles.logoutText}>Logout</Text>
+            </TouchableOpacity>
+          ),
+        }} 
+      />
+
       <View style={styles.header}>
         <Text style={styles.balanceText}>
           Total Balance: ${transactions.reduce((total, transaction) => {
@@ -130,6 +170,9 @@ export default function DashboardScreen() {
               return total - amount;
             }
           }, 0).toFixed(2)}
+        </Text>
+        <Text style={styles.transactionCount}>
+          Total Transactions: {transactions.length}
         </Text>
       </View>
 
@@ -145,9 +188,6 @@ export default function DashboardScreen() {
       {transactions.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyStateText}>No transactions yet</Text>
-          <Text style={styles.emptyStateSubtext}>
-            Add your first transaction by clicking the button above
-          </Text>
         </View>
       ) : (
         <FlatList
@@ -183,6 +223,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     color: '#333',
+    marginBottom: 5,
+  },
+  transactionCount: {
+    fontSize: 14,
+    textAlign: 'center',
+    color: '#666',
   },
   addButton: {
     backgroundColor: '#007AFF',
@@ -190,11 +236,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
   },
   addButtonText: {
     color: 'white',
@@ -218,11 +259,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   transactionInfo: {
     flex: 1,
@@ -255,20 +291,21 @@ const styles = StyleSheet.create({
     color: '#666',
     textTransform: 'uppercase',
   },
+  logoutButton: {
+    marginRight: 15,
+    padding: 8,
+  },
+  logoutText: {
+    color: '#F44336',
+    fontWeight: 'bold',
+  },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
   },
   emptyStateText: {
     fontSize: 18,
     color: '#666',
-    marginBottom: 10,
-  },
-  emptyStateSubtext: {
-    fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
   },
 });
